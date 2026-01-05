@@ -1,54 +1,92 @@
 // PDF.js (ESM build)
 import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.530/build/pdf.mjs";
 
-// IMPORTANT: set workerSrc (recommended by PDF.js docs/maintainers)
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.530/build/pdf.worker.mjs";
 
-const PDF_URL = "RARE Food Catalogue.pdf";  // <-- your catalog path
+// IMPORTANT: spaces in URLs should be encoded to avoid 404s on many servers
+const PDF_URL = "RARE Food Catalogue.pdf";
 
 const bookEl = document.getElementById("book");
 const prevBtn = document.getElementById("prevBtn");
 const nextBtn = document.getElementById("nextBtn");
 const pageInfo = document.getElementById("pageInfo");
 
-function getTargetPageWidthPx() {
-  // In landscape mode, StPageFlip shows 2 pages. Give each page roughly half the container.
-  const shellWidth = bookEl.clientWidth || 900;
-  const isNarrow = shellWidth < 700;
-  return isNarrow ? Math.min(shellWidth - 40, 520) : Math.min((shellWidth - 40) / 2, 520);
+let currentPageFlip = null;
+let cachedPdf = null;
+
+function isMobileLayout() {
+  return window.matchMedia("(max-width: 700px)").matches;
 }
 
+/** Pick a target render width for each PDF page (CSS pixels) */
+function getTargetPageWidthPx() {
+  const shellWidth = bookEl.clientWidth || 900;
+  const padding = 30;
+
+  if (isMobileLayout()) {
+    // single page view on mobile
+    return Math.min(shellWidth - padding, 560);
+  }
+
+  // two-page spread on wider screens: each page ~ half the container
+  return Math.min((shellWidth - padding) / 2, 560);
+}
+
+/** Render a PDF page into a crisp canvas (retina support) */
 async function renderPdfPageToCanvas(pdf, pageNumber, targetWidthPx) {
   const page = await pdf.getPage(pageNumber);
 
-  // Start with scale 1 to measure original size
-  const viewport1 = page.getViewport({ scale: 1 });
-
-  // Scale so the page matches our target width
-  const scale = targetWidthPx / viewport1.width;
+  const viewportAt1 = page.getViewport({ scale: 1 });
+  const scale = targetWidthPx / viewportAt1.width;
   const viewport = page.getViewport({ scale });
+
+  const dpr = Math.max(1, window.devicePixelRatio || 1);
 
   const canvas = document.createElement("canvas");
   const ctx = canvas.getContext("2d", { alpha: false });
 
-  canvas.width = Math.floor(viewport.width);
-  canvas.height = Math.floor(viewport.height);
+  // Actual pixel buffer for sharpness
+  canvas.width = Math.floor(viewport.width * dpr);
+  canvas.height = Math.floor(viewport.height * dpr);
+
+  // CSS size
+  canvas.style.width = `${Math.floor(viewport.width)}px`;
+  canvas.style.height = `${Math.floor(viewport.height)}px`;
+
+  // Scale drawing ops to DPR
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
 
   await page.render({ canvasContext: ctx, viewport }).promise;
 
-  return { canvas, width: canvas.width, height: canvas.height };
+  return {
+    canvas,
+    width: Math.floor(viewport.width),
+    height: Math.floor(viewport.height),
+  };
+}
+
+function destroyFlipbook() {
+  if (currentPageFlip) {
+    try { currentPageFlip.destroy(); } catch (_) {}
+    currentPageFlip = null;
+  }
+  bookEl.innerHTML = "";
 }
 
 async function buildFlipbook() {
-  bookEl.innerHTML = ""; // reset
+  destroyFlipbook();
 
-  const loadingTask = pdfjsLib.getDocument(PDF_URL);
-  const pdf = await loadingTask.promise;
+  // Load PDF once (reuse on rebuild)
+  if (!cachedPdf) {
+    const loadingTask = pdfjsLib.getDocument(PDF_URL);
+    cachedPdf = await loadingTask.promise;
+  }
+  const pdf = cachedPdf;
 
   const targetWidth = getTargetPageWidthPx();
 
-  // Render first page to determine base page size for StPageFlip
+  // Render first page to define base size for PageFlip
   const first = await renderPdfPageToCanvas(pdf, 1, targetWidth);
   const baseWidth = first.width;
   const baseHeight = first.height;
@@ -59,10 +97,9 @@ async function buildFlipbook() {
     const pageDiv = document.createElement("div");
     pageDiv.className = "page";
 
-    // Make cover/back cover “hard” (nice effect)
+    // Make cover/back cover “hard”
     if (i === 1 || i === pdf.numPages) pageDiv.dataset.density = "hard";
 
-    // Render canvas for this page
     const { canvas } = (i === 1)
       ? first
       : await renderPdfPageToCanvas(pdf, i, targetWidth);
@@ -72,21 +109,24 @@ async function buildFlipbook() {
     pages.push(pageDiv);
   }
 
-  // Init StPageFlip
-  // Using the browser bundle: new St.PageFlip(...)
   const pageFlip = new St.PageFlip(bookEl, {
     width: baseWidth,
     height: baseHeight,
     size: "stretch",
     minWidth: 320,
-    maxWidth: 900,
+    maxWidth: 1400,
     minHeight: 420,
-    maxHeight: 1200,
+    maxHeight: 1400,
     showCover: true,
-    mobileScrollSupport: true
+
+    // Key for responsiveness: single-page on mobile
+    usePortrait: isMobileLayout(),
+
+    mobileScrollSupport: true,
   });
 
   pageFlip.loadFromHTML(pages);
+  currentPageFlip = pageFlip;
 
   function updateInfo() {
     const current = pageFlip.getCurrentPageIndex() + 1;
@@ -99,14 +139,14 @@ async function buildFlipbook() {
 
   prevBtn.onclick = () => pageFlip.flipPrev();
   nextBtn.onclick = () => pageFlip.flipNext();
-
-  // Rebuild on resize (keeps it sharp & correctly scaled)
-  let resizeTimer;
-  window.addEventListener("resize", () => {
-    clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => buildFlipbook().catch(console.error), 250);
-  });
 }
+
+// Debounced rebuild on resize/orientation change
+let resizeTimer;
+window.addEventListener("resize", () => {
+  clearTimeout(resizeTimer);
+  resizeTimer = setTimeout(() => buildFlipbook().catch(console.error), 250);
+});
 
 buildFlipbook().catch((err) => {
   console.error(err);
@@ -114,5 +154,3 @@ buildFlipbook().catch((err) => {
     Failed to load catalog. Make sure the PDF exists at <b>${PDF_URL}</b>.
   </div>`;
 });
-
-

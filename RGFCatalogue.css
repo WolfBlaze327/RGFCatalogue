@@ -17,17 +17,18 @@ body {
 }
 
 .topbar {
-  padding: 16px 18px;
+  padding: 14px 16px;
   border-bottom: 1px solid var(--border);
   background: rgba(0,0,0,0.25);
   position: sticky;
   top: 0;
+  z-index: 10;
   backdrop-filter: blur(8px);
 }
 
 .topbar h1 {
   margin: 0 0 10px;
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 700;
 }
 
@@ -53,25 +54,26 @@ body {
 .pageInfo { color: var(--muted); font-weight: 600; }
 
 .wrap {
-  max-width: 1100px;
+  max-width: 1200px;
   margin: 0 auto;
-  padding: 22px 16px 34px;
+  padding: 18px 14px 28px;
 }
 
 .bookShell {
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 18px;
-  padding: 18px;
+  padding: 14px;
   display: grid;
   place-items: center;
   overflow: hidden;
 }
 
-/* Where the flipbook lives */
+/* Responsive book area */
 .book {
-  width: min(100%, 980px);
-  height: min(76vh, 760px);
+  width: 100%;
+  max-width: 1100px;
+  height: clamp(420px, 75vh, 820px);
 }
 
 /* Page element that contains canvas */
@@ -87,7 +89,14 @@ body {
 .page canvas {
   width: 100%;
   height: 100%;
-  object-fit: contain;
+}
+
+/* Mobile tweaks */
+@media (max-width: 700px) {
+  .topbar h1 { font-size: 15px; }
+  .btn { padding: 9px 10px; border-radius: 9px; }
+  .bookShell { padding: 10px; border-radius: 14px; }
+  .book { height: clamp(420px, 78vh, 720px); }
 }
 
 .hint {

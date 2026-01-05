@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Product Catalog</title>
+
+  <!-- StPageFlip CSS -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/src/Style/stPageFlip.css">
+
+  <link rel="stylesheet" href="/RareGlobalFiles/RGF Catalog/RGFCatalogue.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>Product Catalog</h1>
+
+    <div class="actions">
+      <!-- Downloadable PDF -->
+      <a class="btn" href="/RareGlobalFiles/RGF Catalog/catalog/RARE Food Catalogue.pdf" download>Download Catalog (PDF)</a>
+      <button class="btn" id="prevBtn" type="button">◀ Prev</button>
+      <button class="btn" id="nextBtn" type="button">Next ▶</button>
+      <span class="pageInfo" id="pageInfo">Page –</span>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="bookShell">
+      <!-- StPageFlip mounts inside this element -->
+      <div id="book" class="book"></div>
+    </div>
+
+    <p class="hint">
+      Tip: drag a page corner (or swipe on mobile).
+    </p>
+  </main>
+
+  <!-- StPageFlip JS -->
+  <script src="https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js"></script>
+
+  <!-- Your flipbook logic (uses PDF.js as an ES module) -->
+  <script type="module" src="/RareGlobalFiles/RGF Catalog/RGFCatalogue.js"></script>
+</body>
+</html>

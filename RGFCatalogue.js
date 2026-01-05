@@ -5,7 +5,7 @@ import * as pdfjsLib from "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.530/build
 pdfjsLib.GlobalWorkerOptions.workerSrc =
   "https://cdn.jsdelivr.net/npm/pdfjs-dist@5.4.530/build/pdf.worker.mjs";
 
-const PDF_URL = "/RareGlobalFiles/RGF Catalog/catalog/RARE Food Catalogue.pdf";  // <-- your catalog path
+const PDF_URL = "/catalog/RARE Food Catalogue.pdf";  // <-- your catalog path
 
 const bookEl = document.getElementById("book");
 const prevBtn = document.getElementById("prevBtn");
@@ -114,3 +114,4 @@ buildFlipbook().catch((err) => {
     Failed to load catalog. Make sure the PDF exists at <b>${PDF_URL}</b>.
   </div>`;
 });
+
